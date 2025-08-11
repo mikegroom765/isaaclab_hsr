@@ -17,13 +17,16 @@ from isaaclab.managers import TerminationTermCfg as DoneTerm
 from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.utils import configclass
 
+from isaaclab_hsr.assets.hsrb import HSRB_CFG # isort:skip
+from isaaclab_hsr.tasks.manager_based.isaaclab_hsr.mdp.actions import hsr_actions, action_cfgs
+
 from . import mdp
 
 ##
 # Pre-defined configs
 ##
 
-from isaaclab_assets.robots.cartpole import CARTPOLE_CFG  # isort:skip
+from isaaclab_assets.robots.cartpole import CARTPOLE_CFG  
 
 
 ##
@@ -42,7 +45,7 @@ class IsaaclabHsrSceneCfg(InteractiveSceneCfg):
     )
 
     # robot
-    robot: ArticulationCfg = CARTPOLE_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+    robot: ArticulationCfg = HSRB_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
 
     # lights
     dome_light = AssetBaseCfg(
@@ -60,7 +63,14 @@ class IsaaclabHsrSceneCfg(InteractiveSceneCfg):
 class ActionsCfg:
     """Action specifications for the MDP."""
 
-    joint_effort = mdp.JointEffortActionCfg(asset_name="robot", joint_names=["slider_to_cart"], scale=100.0)
+    # joint_effort = mdp.JointEffortActionCfg(asset_name="robot", joint_names=["slider_to_cart"], scale=100.0)
+    arm_action = mdp.RelativeJointPositionActionCfg(
+            asset_name="robot", joint_names=["arm_lift_joint", "arm_flex_joint", "arm_roll_joint", "wrist_flex_joint", "wrist_roll_joint"], scale=0.1, debug_vis=False
+    )
+    base_action = action_cfgs.HSRBaseVelocityControlCfg(
+        asset_name="robot", joint_names=["base_l_drive_wheel_joint", "base_r_drive_wheel_joint", "base_roll_joint"], scale=0.1, debug_vis=False # use_default_offset=True,
+    )
+    gripper_action = action_cfgs.HSRGripperActionCfg(asset_name="robot")
 
 
 @configclass
@@ -115,26 +125,26 @@ class RewardsCfg:
 
     # (1) Constant running reward
     alive = RewTerm(func=mdp.is_alive, weight=1.0)
-    # (2) Failure penalty
-    terminating = RewTerm(func=mdp.is_terminated, weight=-2.0)
-    # (3) Primary task: keep pole upright
-    pole_pos = RewTerm(
-        func=mdp.joint_pos_target_l2,
-        weight=-1.0,
-        params={"asset_cfg": SceneEntityCfg("robot", joint_names=["cart_to_pole"]), "target": 0.0},
-    )
-    # (4) Shaping tasks: lower cart velocity
-    cart_vel = RewTerm(
-        func=mdp.joint_vel_l1,
-        weight=-0.01,
-        params={"asset_cfg": SceneEntityCfg("robot", joint_names=["slider_to_cart"])},
-    )
-    # (5) Shaping tasks: lower pole angular velocity
-    pole_vel = RewTerm(
-        func=mdp.joint_vel_l1,
-        weight=-0.005,
-        params={"asset_cfg": SceneEntityCfg("robot", joint_names=["cart_to_pole"])},
-    )
+    # # (2) Failure penalty
+    # terminating = RewTerm(func=mdp.is_terminated, weight=-2.0)
+    # # (3) Primary task: keep pole upright
+    # pole_pos = RewTerm(
+    #     func=mdp.joint_pos_target_l2,
+    #     weight=-1.0,
+    #     params={"asset_cfg": SceneEntityCfg("robot", joint_names=["cart_to_pole"]), "target": 0.0},
+    # )
+    # # (4) Shaping tasks: lower cart velocity
+    # cart_vel = RewTerm(
+    #     func=mdp.joint_vel_l1,
+    #     weight=-0.01,
+    #     params={"asset_cfg": SceneEntityCfg("robot", joint_names=["slider_to_cart"])},
+    # )
+    # # (5) Shaping tasks: lower pole angular velocity
+    # pole_vel = RewTerm(
+    #     func=mdp.joint_vel_l1,
+    #     weight=-0.005,
+    #     params={"asset_cfg": SceneEntityCfg("robot", joint_names=["cart_to_pole"])},
+    # )
 
 
 @configclass
@@ -144,10 +154,10 @@ class TerminationsCfg:
     # (1) Time out
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
     # (2) Cart out of bounds
-    cart_out_of_bounds = DoneTerm(
-        func=mdp.joint_pos_out_of_manual_limit,
-        params={"asset_cfg": SceneEntityCfg("robot", joint_names=["slider_to_cart"]), "bounds": (-3.0, 3.0)},
-    )
+    # cart_out_of_bounds = DoneTerm(
+    #     func=mdp.joint_pos_out_of_manual_limit,
+    #     params={"asset_cfg": SceneEntityCfg("robot", joint_names=["slider_to_cart"]), "bounds": (-3.0, 3.0)},
+    # )
 
 
 ##
