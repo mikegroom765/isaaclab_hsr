@@ -14,7 +14,7 @@ from isaaclab.sensors import RayCasterCfg, patterns
 
 
 HOKUYO_UST_20LX_RAYCASTER_CFG = RayCasterCfg(
-    attach_yaw_only=False,
+    ray_alignment='base',
     pattern_cfg=patterns.LidarPatternCfg(
         channels=1, vertical_fov_range=(0.0, 0.0), horizontal_fov_range=(45, 315), horizontal_res=1.0 # actual value is 0.25, number of points is downsampled so is used 1.0
     ),

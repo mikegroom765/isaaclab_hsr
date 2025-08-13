@@ -1,7 +1,7 @@
 from dataclasses import MISSING
 from isaaclab.utils import configclass
 from isaaclab.managers.action_manager import ActionTermCfg, ActionTerm
-from isaaclab_hsr.tasks.manager_based.isaaclab_hsr.mdp.actions import hsr_actions
+from isaaclab_hsr.actions import hsr_actions
 
 ##
 # HSR actions.

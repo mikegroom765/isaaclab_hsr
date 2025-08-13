@@ -174,7 +174,7 @@ HSRB_STUDENT_CFG = HSRB_CFG
 HSRB_SCANDOTS_CFG = RayCasterCfg(
     prim_path="{ENV_REGEX_NS}/Robot/base_link",
     offset=RayCasterCfg.OffsetCfg(pos=(0.8, 0.0, 20.0), rot=(0.0, 0.0, 0.0, 1.0)),
-    attach_yaw_only=True,
+    ray_alignment='yaw',
     pattern_cfg=patterns.GridPatternCfg(resolution=0.16, size=[1.6, 1.6]), # 121 points
     debug_vis=True,
     mesh_prim_paths=["/World/ground"],
@@ -184,7 +184,7 @@ HSRB_SCANDOTS_CFG = RayCasterCfg(
 # HSRB_SCANDOTS_CFG = RayCasterCfg(
 #     prim_path="{ENV_REGEX_NS}/Robot/head_rgbd_sensor_link",
 #     offset=RayCasterCfg.OffsetCfg(pos=(0.0, 1.0, 20.0), rot=(1.0, 0.0, 0.0, 0.0)), # rot=(0.0, 0.0, 0.0, 1.0)
-#     attach_yaw_only=True,
+#     ray_alignment='base',
 #     pattern_cfg=patterns.GridPatternCfg(resolution=0.16, size=[1.6, 1.6]), # 121 points
 #     debug_vis=True,
 #     mesh_prim_paths=["/World/ground"],
@@ -201,7 +201,7 @@ HSRB_LIDAR_CFG = HOKUYO_UST_20LX_RAYCASTER_CFG.replace(
 HSRB_DEPTH_CAMERA_CFG = RayCasterCfg(
         prim_path="{ENV_REGEX_NS}/Robot/head_rgbd_sensor_link",
         offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 0.0), rot=(0.0, 0.0, 1.0, 0.0)),
-        attach_yaw_only=False,
+        ray_alignment='base',
         pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
         debug_vis=True,
         mesh_prim_paths=["/World/ground"],
