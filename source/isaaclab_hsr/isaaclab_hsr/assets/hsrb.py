@@ -25,6 +25,7 @@ FILE_DIR = os.path.dirname(os.path.realpath(__file__))
 
 # Go up one directory to get the USD file
 HSRB_MODEL_PATH = os.path.join(FILE_DIR, '..', 'hsrb', 'hsrb4s.usd')
+BLUE_CUBE_MODEL_PATH = os.path.join(FILE_DIR, '..', 'hsrb', 'blue_cube.usd')
 
 HSRB_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
