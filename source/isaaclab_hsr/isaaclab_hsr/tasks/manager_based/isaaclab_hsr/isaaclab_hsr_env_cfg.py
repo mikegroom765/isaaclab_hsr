@@ -18,9 +18,9 @@ from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.utils import configclass
 
 from isaaclab_hsr.assets.hsrb import HSRB_CFG # isort:skip
-from isaaclab_hsr.tasks.manager_based.isaaclab_hsr.mdp.actions import hsr_actions, action_cfgs
+from isaaclab_hsr.mdp import hsr_actions, action_cfgs
 
-from . import mdp
+import isaaclab_utils.mdp as mdp
 
 ##
 # Pre-defined configs
