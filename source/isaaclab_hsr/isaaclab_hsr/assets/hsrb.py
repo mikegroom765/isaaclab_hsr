@@ -24,7 +24,7 @@ import torch
 FILE_DIR = os.path.dirname(os.path.realpath(__file__))
 
 # Go up one directory to get the USD file
-HSRB_MODEL_PATH = os.path.join(FILE_DIR, '..', 'hsrb', 'hsrb4s.usd')
+HSRB_MODEL_PATH = os.path.join(FILE_DIR, '..', 'hsrb', 'hsrb4s', 'hsrb4s.usd')
 BLUE_CUBE_MODEL_PATH = os.path.join(FILE_DIR, '..', 'hsrb', 'blue_cube.usd')
 
 HSRB_CFG = ArticulationCfg(
@@ -41,7 +41,7 @@ HSRB_CFG = ArticulationCfg(
         ),
         joint_drive_props=sim_utils.JointDrivePropertiesCfg(drive_type="force"),
         activate_contact_sensors=True,
-        collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True,contact_offset=0.001, rest_offset=0.0),
+        collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True, contact_offset=0.001, rest_offset=0.0),
     ),
     init_state=ArticulationCfg.InitialStateCfg(
         pos=(0.0, 0.0, 0.01),
@@ -173,7 +173,7 @@ HSRB_STUDENT_CFG = HSRB_CFG
 
 
 HSRB_SCANDOTS_CFG = RayCasterCfg(
-    prim_path="{ENV_REGEX_NS}/Robot/base_link",
+    prim_path="{ENV_REGEX_NS}/Robot/base_footprint",
     offset=RayCasterCfg.OffsetCfg(pos=(0.8, 0.0, 20.0), rot=(0.0, 0.0, 0.0, 1.0)),
     ray_alignment='yaw',
     pattern_cfg=patterns.GridPatternCfg(resolution=0.16, size=[1.6, 1.6]), # 121 points
@@ -193,7 +193,7 @@ HSRB_SCANDOTS_CFG = RayCasterCfg(
 
 HSRB_LIDAR_CFG = HOKUYO_UST_20LX_RAYCASTER_CFG.replace(
     offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 0.0), rot=(0.0, 0.0, 0.0, 1.0)),
-    prim_path="{ENV_REGEX_NS}/Robot/base_range_sensor_link",
+    prim_path="{ENV_REGEX_NS}/Robot/base_footprint/base_link/base_range_sensor_link",
     mesh_prim_paths=["/World/ground"],
     debug_vis=False,
 )
@@ -233,7 +233,7 @@ CYLINDER_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
         usd_path=CYLINDER_PATH,
         activate_contact_sensors=True,
-        collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True,contact_offset=0.00, rest_offset=0.0),
+        collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True,contact_offset=0.001, rest_offset=0.0),
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=True,
         ),
