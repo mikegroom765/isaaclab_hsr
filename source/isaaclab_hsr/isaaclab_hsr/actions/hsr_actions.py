@@ -180,7 +180,7 @@ class HSRBaseVelocityControl(ActionTerm):
         # perform ManagerTermBase initialization first 
         super().__init__(cfg, env)
         
-        self._joint_ids, self._joint_names = self._asset.find_joints(self.cfg.joint_names)
+        self._joint_ids, self._joint_names = self._asset.find_joints(self.cfg.joint_names, preserve_order=True)
         self._num_joints = len(self._joint_ids)
         # Avoid indexing across all joints for efficiency
         if self._num_joints == self._asset.num_joints:
@@ -247,7 +247,7 @@ class HSRBaseVelocityControl(ActionTerm):
         dot_r = self.wheel_radius_over_separation * joint_params[:, 1] - self.wheel_radius_over_separation * joint_params[:, 0] - joint_params[:, 2]
         
         return torch.stack([dot_x, dot_y, dot_r], dim=1)
-        
+
     def inverse_dynamics(self, cmd_vel: torch.Tensor, steer_angle: torch.Tensor) -> torch.Tensor:
         """Given the desired cartesian space velocities and steering angles, compute the joint velocities.
         
@@ -259,60 +259,41 @@ class HSRBaseVelocityControl(ActionTerm):
         
         cos_s = torch.cos(steer_angle)
         sin_s = torch.sin(steer_angle)
-        
-        vel_wheel_r = (cos_s / self.wheel_radius - sin_s / self.inverse_wheel_radius_factor) * cmd_vel[:, 0] + (sin_s / self.wheel_radius + cos_s / self.inverse_wheel_radius_factor) * cmd_vel[:, 1]
-        vel_wheel_l = (cos_s / self.wheel_radius + sin_s / self.inverse_wheel_radius_factor) * cmd_vel[:, 0] + (sin_s / self.wheel_radius - cos_s / self.inverse_wheel_radius_factor) * cmd_vel[:, 1]
+
+        vel_wheel_r = (cos_s / self.wheel_radius - sin_s * self.inverse_wheel_radius_factor) * cmd_vel[:, 0] + \
+                      (sin_s / self.wheel_radius + cos_s * self.inverse_wheel_radius_factor) * cmd_vel[:, 1]
+
+        vel_wheel_l = (cos_s / self.wheel_radius + sin_s * self.inverse_wheel_radius_factor) * cmd_vel[:, 0] + \
+                      (sin_s / self.wheel_radius - cos_s * self.inverse_wheel_radius_factor) * cmd_vel[:, 1]
+
         vel_steer = -sin_s / self.wheel_offset * cmd_vel[:, 0] + cos_s / self.wheel_offset * cmd_vel[:, 1] - cmd_vel[:, 2]
         
         return torch.stack([vel_wheel_l, vel_wheel_r, vel_steer], dim=1)
 
     def process_actions(self, raw_actions: torch.Tensor):
         """Given the desired (dot_x, dot_y, dot_r) in local base frame and current steering angles,
-        compute the corresponding wheel velocities (with per-env velocity clamping).
-        
-        This function in one control step does the following:
-            1. Calculate the cartesian space velocities by using forward dynamics equations (joint_params -> cartesian_params)
-            2. Integrate velocities to update wheel odometry
-            3. Calculate relative cartesian space velocities w.r.t. the current odom estimate
-            4. Calculate relative cmd joint velocities w.r.t. the current joint velocities
-            5. Calculate joint velocities by using inverse dynamics equations (relcmd -> joint_params)
-            6. Apply scaled velocity limits
-            7. Return the processed actions
-        
-        Args:
-            raw_actions:  (N x 3)  = desired [dot_x, dot_y, dot_r]
-            steer_angle:  (N,)     = per-environment steering angle
-        Returns:
-            processed_actions:  (N x 3) = [vel_wheel_l, vel_wheel_r, vel_steer] after clamping
-        """
+        compute the corresponding wheel velocities (with per-env velocity clamping)."""
         # process the raw actions
-        # here we convert from cmd_vel to joint space velocities
-        self._raw_actions[:] = raw_actions.clamp(-1.0, 1.0) # .clamp_(-1.0, 1.0) # [num_envs, 3]
-        
+        self._raw_actions[:] = raw_actions.clamp(-1.0, 1.0)
+
         # assuming raw actions are from [-1, 1] range - scale them to the HSR limits
         self._raw_actions[:, 0] = self._raw_actions[:, 0] * self.cmd_vel_limit_x
         self._raw_actions[:, 1] = self._raw_actions[:, 1] * self.cmd_vel_limit_y
         self._raw_actions[:, 2] = self._raw_actions[:, 2] * self.cmd_vel_limit_rz
-        
+
         # get current joint velocities and steering angles
-        cur_left_wheel_vel = self._asset.data.joint_vel[:, self.left_wheel_idx] # [num_envs, 1]
-        cur_right_wheel_vel = self._asset.data.joint_vel[:, self.right_wheel_idx] # [num_envs, 1]
-        cur_roll_vel = self._asset.data.joint_vel[:, self.roll_idx] # [num_envs, 1]
-        self.state_.steer_angle = self._asset.data.joint_pos[:, self.roll_idx] # [num_envs, 1]
+        cur_left_wheel_vel = self._asset.data.joint_vel[:, self.left_wheel_idx]
+        cur_right_wheel_vel = self._asset.data.joint_vel[:, self.right_wheel_idx]
+        cur_roll_vel = self._asset.data.joint_vel[:, self.roll_idx]
+        self.state_.steer_angle = self._asset.data.joint_pos[:, self.roll_idx]
         
-        joint_param = torch.cat([cur_left_wheel_vel, cur_right_wheel_vel, cur_roll_vel], dim=-1) # [num_envs, 3]
+        joint_param = torch.cat([cur_left_wheel_vel, cur_right_wheel_vel, cur_roll_vel], dim=-1)
 
-        # Calculate cartesian space velocities by using forward dynamics equations
-        cartesian_param_ = self.compiled_forward_dynamics(joint_param, self.state_.steer_angle[:,0]) # [num_envs, 3]
-        
-        self.state_vel_.x_vel = cartesian_param_[:, 0] # [num_envs]
-        self.state_vel_.y_vel = cartesian_param_[:, 1] # [num_envs]
-        self.state_vel_.ang_vel = cartesian_param_[:, 2] # [num_envs]
-
-        # Integrate velocities to update wheel odometry
+        # --- ODOMETRY UPDATE (Keep this for tracking) ---
+        cartesian_param_ = self.compiled_forward_dynamics(joint_param, self.state_.steer_angle[:,0])
         diff_r = cartesian_param_[:, 2] * self.dt
         ang = self.odometry_.ang + 0.5 * diff_r
-        cosr = torch.cos(ang)  # use Runge-Kutta 2nd
+        cosr = torch.cos(ang)
         sinr = torch.sin(ang)
         abs_dot_x = cartesian_param_[:, 0] * cosr - cartesian_param_[:, 1] * sinr
         abs_dot_y = cartesian_param_[:, 0] * sinr + cartesian_param_[:, 1] * cosr
@@ -320,25 +301,10 @@ class HSRBaseVelocityControl(ActionTerm):
         self.odometry_.y += abs_dot_y[:] * self.dt
         self.odometry_.ang += diff_r
     
-        # Convert local frame velocity commands to world frame
-        ang = self.odometry_.ang + 0.5 * self._raw_actions[:, 2] * self.dt
-        cosr = torch.cos(ang)
-        sinr = torch.sin(ang)
-        self.cmd.dot_x = self._raw_actions[:, 0] * cosr - self._raw_actions[:, 1] * sinr
-        self.cmd.dot_y = self._raw_actions[:, 0] * sinr + self._raw_actions[:, 1] * cosr
-        self.cmd.dot_r = self._raw_actions[:, 2]
-        
-        # Calculate updated cartesian space velocities w.r.t. the current odom estimate
-        diff_r = self.cmd.dot_r[:] * self.dt
-        self.relcmd.dot_r = self.cmd.dot_r[:]
-        ang = self.odometry_.ang + 0.5 * diff_r  # use Runge-Kutta 2nd
-        cosr = torch.cos(-ang)
-        sinr = torch.sin(-ang)
-        self.relcmd.dot_x = self.cmd.dot_x * cosr - self.cmd.dot_y * sinr
-        self.relcmd.dot_y = self.cmd.dot_x * sinr + self.cmd.dot_y * cosr
+        self.relcmd.values = self._raw_actions
 
         # Calculate updated joint velocities given the current steering angle
-        joint_param_ = self.compiled_inverse_dynamics(self.relcmd(), self.state_.steer_angle[:,0]) # [num_envs, 3]
+        joint_param_ = self.compiled_inverse_dynamics(self.relcmd(), self.state_.steer_angle[:,0])
         self.joint_param_.vel_wheel_l = joint_param_[:, 0]
         self.joint_param_.vel_wheel_r = joint_param_[:, 1]
         self.joint_param_.vel_steer = joint_param_[:, 2]
@@ -358,9 +324,9 @@ class HSRBaseVelocityControl(ActionTerm):
         self.joint_param_.vel_wheel_r /= scale
         self.joint_param_.vel_steer /= scale
             
-        self._processed_actions[:, 1] = self.joint_param_.vel_wheel_l
-        self._processed_actions[:, 2] = self.joint_param_.vel_wheel_r
-        self._processed_actions[:, 0] = self.joint_param_.vel_steer
+        self._processed_actions[:, 0] = self.joint_param_.vel_wheel_l
+        self._processed_actions[:, 1] = self.joint_param_.vel_wheel_r
+        self._processed_actions[:, 2] = self.joint_param_.vel_steer
 
 
     def reset(self, env_ids: Sequence[int] | None = None) -> None:
@@ -372,7 +338,7 @@ class HSRBaseVelocityControl(ActionTerm):
             self.odometry_.y[:] = root_states[:, 1] - self._env.scene.env_origins[:, 1]
             root_state_quat = root_states[:, 3:7]
             self.odometry_.ang[:] = euler_xyz_from_quat(root_state_quat)[2]
-            self.state_.steer_angle = self.odometry_.ang.clone()
+            self.state_.steer_angle = 0.0
             self.state_vel_.x_vel[env_ids], self.state_vel_.y_vel[env_ids], self.state_vel_.ang_vel[env_ids] = 0.0, 0.0, 0.0
             self.joint_param_.vel_wheel_l[:], self.joint_param_.vel_wheel_r[:], self.joint_param_.vel_steer[:] = 0.0, 0.0, 0.0
             self.cmd.dot_x[:], self.cmd.dot_y[:], self.cmd.dot_r[:] = 0.0, 0.0, 0.0
@@ -384,7 +350,7 @@ class HSRBaseVelocityControl(ActionTerm):
             self.odometry_.y[env_ids] = root_states[:, 1] - self._env.scene.env_origins[env_ids, 1]
             root_state_quat = root_states[:, 3:7]
             self.odometry_.ang[env_ids] = euler_xyz_from_quat(root_state_quat)[2]
-            self.state_.steer_angle = self.odometry_.ang.clone()
+            self.state_.steer_angle = 0.0
             self.state_vel_.x_vel[env_ids], self.state_vel_.y_vel[env_ids], self.state_vel_.ang_vel[env_ids] = 0.0, 0.0, 0.0
             self.joint_param_.vel_wheel_l[env_ids], self.joint_param_.vel_wheel_r[env_ids], self.joint_param_.vel_steer[env_ids] = 0.0, 0.0, 0.0
             self.cmd.dot_x[env_ids], self.cmd.dot_y[env_ids], self.cmd.dot_r[env_ids] = 0.0, 0.0, 0.0

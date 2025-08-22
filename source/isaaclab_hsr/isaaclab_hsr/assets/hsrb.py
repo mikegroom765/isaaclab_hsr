@@ -25,6 +25,7 @@ FILE_DIR = os.path.dirname(os.path.realpath(__file__))
 
 # Go up one directory to get the USD file
 HSRB_MODEL_PATH = os.path.join(FILE_DIR, '..', 'hsrb', 'hsrb4s', 'hsrb4s.usd')
+TEST_ROBOT_MODEL_PATH = os.path.join(FILE_DIR, '..', 'hsrb', 'hsrb4s', 'test_robot.usd')
 BLUE_CUBE_MODEL_PATH = os.path.join(FILE_DIR, '..', 'hsrb', 'blue_cube.usd')
 
 HSRB_CFG = ArticulationCfg(
@@ -32,8 +33,8 @@ HSRB_CFG = ArticulationCfg(
         usd_path=HSRB_MODEL_PATH,
         articulation_props=sim_utils.ArticulationRootPropertiesCfg(
             # enabled_self_collisions=False,
-            solver_position_iteration_count=4,
-            solver_velocity_iteration_count=4,
+            solver_position_iteration_count=32,
+            solver_velocity_iteration_count=32,
             sleep_threshold=0.005,
             stabilization_threshold=0.001,
             # fix_root_link=False,
@@ -85,7 +86,7 @@ HSRB_CFG = ArticulationCfg(
             effort_limit={
                 "base_l_drive_wheel_joint": 664.020019, # default values from offical hsr USD file - this is different than the URDF file
                 "base_r_drive_wheel_joint": 664.020019,
-                "base_roll_joint": 2067.599853,},
+                "base_roll_joint": 100000,},
             stiffness=15000.0, # default values from offical hsr-omniverse hsr.py file
             damping=0.0, # default values from offical hsr-omniverse hsr.py file
         ),
@@ -144,6 +145,51 @@ HSRB_CFG = ArticulationCfg(
         ),
     },
 )
+
+TEST_ROBOT_CFG = ArticulationCfg(
+    spawn=sim_utils.UsdFileCfg(
+        usd_path=TEST_ROBOT_MODEL_PATH,
+        articulation_props=sim_utils.ArticulationRootPropertiesCfg(
+            enabled_self_collisions=False,
+            solver_position_iteration_count=4,
+            solver_velocity_iteration_count=4,
+            sleep_threshold=0.005,
+            stabilization_threshold=0.001,
+            # fix_root_link=False,
+            # articulation_enabled=True,
+        ),
+        joint_drive_props=sim_utils.JointDrivePropertiesCfg(drive_type="force"),
+        activate_contact_sensors=True,
+        collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True, contact_offset=0.001, rest_offset=0.0),
+    ),
+    init_state=ArticulationCfg.InitialStateCfg(
+        pos=(0.0, 0.0, 0.01),
+        joint_pos={
+            "base_l_drive_wheel_joint": 0.0,
+            "base_r_drive_wheel_joint": 0.0, 
+            "base_roll_joint": 0.0,
+        },
+        joint_vel={
+            "base_l_drive_wheel_joint": 0.0,
+            "base_r_drive_wheel_joint": 0.0,
+            "base_roll_joint": 0.0,
+        },
+    ),
+    actuators={
+        "base": ImplicitActuatorCfg(
+            joint_names_expr=["base_l_drive_wheel_joint", "base_r_drive_wheel_joint", "base_roll_joint"],
+            velocity_limit={
+                "base_l_drive_wheel_joint": 8.0,
+                "base_r_drive_wheel_joint": 8.0, 
+                "base_roll_joint": 8.0, 
+            },
+            stiffness=0.0,
+            damping=10000,
+        ),
+    },
+)
+
+
 """Configuration of HSRB using implicit actuator models.
 
 The following control configuration is used:
