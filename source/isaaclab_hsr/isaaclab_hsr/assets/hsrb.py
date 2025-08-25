@@ -33,16 +33,25 @@ HSRB_CFG = ArticulationCfg(
         usd_path=HSRB_MODEL_PATH,
         articulation_props=sim_utils.ArticulationRootPropertiesCfg(
             # enabled_self_collisions=False,
-            solver_position_iteration_count=32,
-            solver_velocity_iteration_count=32,
+            solver_position_iteration_count=8,
+            solver_velocity_iteration_count=4,
             sleep_threshold=0.005,
             stabilization_threshold=0.001,
             # fix_root_link=False,
             # articulation_enabled=True,
         ),
+        rigid_props=sim_utils.RigidBodyPropertiesCfg(
+            disable_gravity=False,
+            retain_accelerations=False,
+            linear_damping=0.0,
+            angular_damping=0.0,
+            max_linear_velocity=1000.0,
+            max_angular_velocity=1000.0,
+            max_depenetration_velocity=1.0,
+        ),
         joint_drive_props=sim_utils.JointDrivePropertiesCfg(drive_type="force"),
         activate_contact_sensors=True,
-        collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True, contact_offset=0.001, rest_offset=0.0),
+        collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True), #,contact_offset=0.001, rest_offset=0.0),
     ),
     init_state=ArticulationCfg.InitialStateCfg(
         pos=(0.0, 0.0, 0.01),
@@ -160,7 +169,7 @@ TEST_ROBOT_CFG = ArticulationCfg(
         ),
         joint_drive_props=sim_utils.JointDrivePropertiesCfg(drive_type="force"),
         activate_contact_sensors=True,
-        collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True, contact_offset=0.001, rest_offset=0.0),
+        collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True), #,contact_offset=0.001, rest_offset=0.0),
     ),
     init_state=ArticulationCfg.InitialStateCfg(
         pos=(0.0, 0.0, 0.01),
@@ -279,7 +288,7 @@ CYLINDER_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
         usd_path=CYLINDER_PATH,
         activate_contact_sensors=True,
-        collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True,contact_offset=0.001, rest_offset=0.0),
+        collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True), #,contact_offset=0.001, rest_offset=0.0),
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=True,
         ),
