@@ -396,7 +396,7 @@ class HSRGripperAction(ActionTerm):
         super().__init__(cfg, env)
         
         gripper_joint_names = ["hand_l_proximal_joint", "hand_l_distal_joint", "hand_r_proximal_joint", "hand_r_distal_joint"]
-        self._joint_ids, self._joint_names = self._asset.find_joints(gripper_joint_names)
+        self._joint_ids, self._joint_names = self._asset.find_joints(gripper_joint_names, preserve_order=True)
         self._hand_motor_id = self._asset.find_joints("hand_l_proximal_joint")[0]
         self._num_joints = len(self._joint_ids)
         # Avoid indexing across all joints for efficiency
@@ -445,12 +445,11 @@ class HSRGripperAction(ActionTerm):
             )
         self._processed_actions[:, 0] = actions[:, 0]
         self._processed_actions[:, 1] = actions[:, 0]
-        self._processed_actions[:, 2] = -actions[:, 0]
-        self._processed_actions[:, 3] = -actions[:, 0]
+        self._processed_actions[:, 2] = actions[:, 0]
+        self._processed_actions[:, 3] = actions[:, 0]
         
     def apply_actions(self):
         # set position targets
-        jos_pos = self._asset.data.joint_pos[:, self._joint_ids] 
         self._asset.set_joint_position_target(self.processed_actions, joint_ids=self._joint_ids)
         
     def reset(self, env_ids: Sequence[int] | None = None) -> None:
@@ -511,5 +510,5 @@ class HSRBBinaryGripperAction(HSRGripperAction):
         
         self._processed_actions[:, 0] = actions[:, 0]
         self._processed_actions[:, 1] = actions[:, 0]
-        self._processed_actions[:, 2] = -actions[:, 0]
-        self._processed_actions[:, 3] = -actions[:, 0]
+        self._processed_actions[:, 2] = actions[:, 0]
+        self._processed_actions[:, 3] = actions[:, 0]
