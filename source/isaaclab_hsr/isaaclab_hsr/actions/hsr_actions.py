@@ -440,13 +440,13 @@ class HSRGripperAction(ActionTerm):
         actions = self._raw_actions.clamp(-1.0, 1.0)
         actions = math_utils.unscale_transform(
                 actions,
-                self._asset.data.soft_joint_pos_limits[:, self._hand_motor_id, 0],
-                self._asset.data.soft_joint_pos_limits[:, self._hand_motor_id, 1],
+                self._asset.data.soft_joint_pos_limits[:, self._joint_ids, 0],
+                self._asset.data.soft_joint_pos_limits[:, self._joint_ids, 1],
             )
         self._processed_actions[:, 0] = actions[:, 0]
-        self._processed_actions[:, 1] = actions[:, 0]
-        self._processed_actions[:, 2] = actions[:, 0]
-        self._processed_actions[:, 3] = actions[:, 0]
+        self._processed_actions[:, 1] = actions[:, 1]
+        self._processed_actions[:, 2] = actions[:, 2]
+        self._processed_actions[:, 3] = actions[:, 3]
         
     def apply_actions(self):
         # set position targets
@@ -504,11 +504,11 @@ class HSRBBinaryGripperAction(HSRGripperAction):
         
         actions = torch.where(
             self._raw_actions > 0.0,
-            self._asset.data.soft_joint_pos_limits[:, self._hand_motor_id, 1],
-            self._asset.data.soft_joint_pos_limits[:, self._hand_motor_id, 0],
+            self._asset.data.soft_joint_pos_limits[:, self._joint_ids, 1],
+            self._asset.data.soft_joint_pos_limits[:, self._joint_ids, 0],
         )
         
         self._processed_actions[:, 0] = actions[:, 0]
-        self._processed_actions[:, 1] = actions[:, 0]
-        self._processed_actions[:, 2] = actions[:, 0]
-        self._processed_actions[:, 3] = actions[:, 0]
+        self._processed_actions[:, 1] = actions[:, 1]
+        self._processed_actions[:, 2] = actions[:, 2]
+        self._processed_actions[:, 3] = actions[:, 3]
