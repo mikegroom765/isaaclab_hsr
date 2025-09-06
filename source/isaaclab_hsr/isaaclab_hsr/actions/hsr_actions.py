@@ -190,6 +190,8 @@ class HSRBaseVelocityControl(ActionTerm):
         self.wheel_radius = wheel_radius
         self.wheel_offset = wheel_offset
 
+        self._scale = cfg.scale
+
         # add handle for debug visualization (this is set to a valid handle inside set_debug_vis)
         self._debug_vis_handle = None
         # set initial state of debug visualization
@@ -274,6 +276,7 @@ class HSRBaseVelocityControl(ActionTerm):
         """Given the desired (dot_x, dot_y, dot_r) in local base frame and current steering angles,
         compute the corresponding wheel velocities (with per-env velocity clamping)."""
         # process the raw actions
+        raw_actions = raw_actions * self._scale
         self._raw_actions[:] = raw_actions.clamp(-1.0, 1.0)
 
         # assuming raw actions are from [-1, 1] range - scale them to the HSR limits
