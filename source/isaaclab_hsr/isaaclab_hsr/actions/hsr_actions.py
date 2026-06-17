@@ -284,6 +284,8 @@ class HSRBaseVelocityControl(ActionTerm):
         self._raw_actions[:, 1] = self._raw_actions[:, 1] * self.cmd_vel_limit_y
         self._raw_actions[:, 2] = self._raw_actions[:, 2] * self.cmd_vel_limit_rz
 
+        # print(f"Action term {self.__class__.__name__} raw actions (cmd_vel): {self._raw_actions}")
+
         # get current joint velocities and steering angles
         cur_left_wheel_vel = self._asset.data.joint_vel[:, self.left_wheel_idx]
         cur_right_wheel_vel = self._asset.data.joint_vel[:, self.right_wheel_idx]
@@ -453,6 +455,7 @@ class HSRGripperAction(ActionTerm):
         
     def apply_actions(self):
         # set position targets
+        # print(f"Action term {self.__class__.__name__} applying actions: {self.processed_actions}")
         self._asset.set_joint_position_target(self.processed_actions, joint_ids=self._joint_ids)
         
     def reset(self, env_ids: Sequence[int] | None = None) -> None:
