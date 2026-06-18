@@ -511,16 +511,28 @@ class HSRBBinaryGripperAction(HSRGripperAction):
     _asset: Articulation
     
     def process_actions(self, raw_actions: torch.Tensor):
-        """Given the desired gripper action, compute the corresponding joint position targets."""
-        # process the raw actions
+        """Binary gripper: scalar > 0 -> OPEN, else CLOSE.
+
+        Proximal joints go to their UPPER soft limit on OPEN and LOWER on CLOSE. The DISTAL
+        (fingertip) joints are kinematically coupled OPPOSITE to the proximal on the real HSR
+        (URDF: distal = -1.0 * hand_motor - 0.087), so they must take the OTHER endpoint. Driving
+        them to the same endpoint as the proximal (the previous behaviour) curled the fingertip
+        segment OUTWARD on close -- validated with hsr_diag --mode gripper: the fingertips splayed
+        to 0.17 m while the knuckles closed to 0.05 m. Inverting the distal columns makes the
+        fingertips pinch in. The single binary scalar interface is unchanged.
+        """
         self._raw_actions[:] = raw_actions
-        
-        actions = torch.where(
-            self._raw_actions > 0.0,
-            self._asset.data.soft_joint_pos_limits[:, self._joint_ids, 1],
-            self._asset.data.soft_joint_pos_limits[:, self._joint_ids, 0],
-        )
-        
+
+        lower = self._asset.data.soft_joint_pos_limits[:, self._joint_ids, 0]
+        upper = self._asset.data.soft_joint_pos_limits[:, self._joint_ids, 1]
+        open_t, close_t = upper.clone(), lower.clone()
+        # invert the distal (fingertip) joints: OPEN -> lower, CLOSE -> upper
+        for i, n in enumerate(self._joint_names):
+            if "distal" in n:
+                open_t[:, i] = lower[:, i]
+                close_t[:, i] = upper[:, i]
+        actions = torch.where(self._raw_actions > 0.0, open_t, close_t)
+
         self._processed_actions[:, 0] = actions[:, 0]
         self._processed_actions[:, 1] = actions[:, 1]
         self._processed_actions[:, 2] = actions[:, 2]
