@@ -97,9 +97,9 @@ HSRB_CFG = ArticulationCfg(
             # hsr_actions per-joint clamp.
             joint_names_expr=["base_l_drive_wheel_joint", "base_r_drive_wheel_joint", "base_roll_joint"],
             velocity_limit={
-                "base_l_drive_wheel_joint": 8.0, # these values are from hsr-omniverse velocity limits
-                "base_r_drive_wheel_joint": 8.0,
-                "base_roll_joint": 8.0,
+                "base_l_drive_wheel_joint": 20.8, # URDF/hardware ceiling (was 8.0, which capped base speed ~0.32 m/s)
+                "base_r_drive_wheel_joint": 20.8,
+                "base_roll_joint": 2.5,            # URDF roll-joint (steer) limit (was 8.0 -> caster aligned too fast)
             },
             effort_limit=None,  # use USD-authored effort (live: ~28 N.m wheels / 34.46 roll)
             stiffness=None,     # use USD-authored stiffness (0 -> velocity drive); was 15000 (position drive, the freeze bug)
@@ -225,9 +225,9 @@ HSRB_CFG_DELAYED = ArticulationCfg(
             # velocity-control path here is unvalidated -- verify before relying on it.
             joint_names_expr=["base_l_drive_wheel_joint", "base_r_drive_wheel_joint", "base_roll_joint"],
             velocity_limit={
-                "base_l_drive_wheel_joint": 8.0, # these values are from hsr-omniverse velocity limits
-                "base_r_drive_wheel_joint": 8.0,
-                "base_roll_joint": 8.0,
+                "base_l_drive_wheel_joint": 20.8, # URDF/hardware ceiling (was 8.0, which capped base speed ~0.32 m/s)
+                "base_r_drive_wheel_joint": 20.8,
+                "base_roll_joint": 2.5,            # URDF roll-joint (steer) limit (was 8.0 -> caster aligned too fast)
             },
             effort_limit=None,  # use USD-authored effort
             stiffness=None,     # use USD-authored stiffness (0 -> velocity drive); was 15000 (position drive)

@@ -214,11 +214,18 @@ class HSRBaseVelocityControl(ActionTerm):
         
         self.dt = env.step_dt
 
-        self.vel_limit_steer_ = 8.0
-        self.vel_limit_wheel_ = 8.0
+        # Per-joint velocity caps specced to the real HSR (see docs/HSR_WHEEL_FREEZE_FINDINGS.md):
+        #   steer (base_roll): URDF roll-joint limit 2.5 rad/s (was 8.0 -> caster aligned ~3x too fast).
+        #   drive wheels: URDF/hardware ceiling 20.8 rad/s (was 8.0, which self-throttled the base to
+        #     ~0.32 m/s; 20.8 lets the 0.5 m/s command actually be realized -- 0.5 m/s needs 12.5 rad/s).
+        self.vel_limit_steer_ = 2.5
+        self.vel_limit_wheel_ = 20.8
+        # Body-twist command caps. x/y kept at 0.5 m/s (deliberately below the ~0.83 m/s hardware
+        # ceiling -- not too aggressive). yaw raised to the real controller cap 1.8 rad/s (was 0.5,
+        # ~3x too slow). hsrb_common_config: yaw_velocity_limit 1.8; nav max_vel_theta 1.5.
         self.cmd_vel_limit_x = 0.5
         self.cmd_vel_limit_y = 0.5
-        self.cmd_vel_limit_rz = 0.5
+        self.cmd_vel_limit_rz = 1.8
         
         # precompute repeated constrains for efficiency in forward and inverse dynamics
         self.wheel_radius = torch.tensor([self.wheel_radius], device=self.device)
