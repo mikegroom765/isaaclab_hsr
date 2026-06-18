@@ -86,18 +86,24 @@ HSRB_CFG = ArticulationCfg(
     ),
     actuators={
         "base": ImplicitActuatorCfg(
+            # The base is VELOCITY-controlled (set_joint_velocity_target). A velocity drive needs
+            # stiffness=0 / damping>0; the old stiffness=15000 / damping=0 was a POSITION drive that
+            # ignored velocity targets -> the wheels "froze" (confirmed: docs/HSR_WHEEL_FREEZE_FINDINGS.md).
+            # The HSR USD already authors the base correctly as a velocity drive (live K=0, D~57, maxF~28),
+            # which the randomize_actuator_gains drive-type toggle used to restore at runtime. Setting the
+            # gains to None defers to those USD-authored values directly (actuator_cfg: None -> USD prim),
+            # so the spawn drive is correct and the toggle hack is unnecessary. (cf. TEST_ROBOT_CFG below,
+            # which already used stiffness=0/damping>0.) velocity_limit kept at 8.0 to match training + the
+            # hsr_actions per-joint clamp.
             joint_names_expr=["base_l_drive_wheel_joint", "base_r_drive_wheel_joint", "base_roll_joint"],
             velocity_limit={
                 "base_l_drive_wheel_joint": 8.0, # these values are from hsr-omniverse velocity limits
-                "base_r_drive_wheel_joint": 8.0, 
-                "base_roll_joint": 8.0, 
+                "base_r_drive_wheel_joint": 8.0,
+                "base_roll_joint": 8.0,
             },
-            effort_limit={
-                "base_l_drive_wheel_joint": 664.020019, # default values from offical hsr USD file - this is different than the URDF file
-                "base_r_drive_wheel_joint": 664.020019,
-                "base_roll_joint": 100000,},
-            stiffness=15000.0, # default values from offical hsr-omniverse hsr.py file
-            damping=0.0, # default values from offical hsr-omniverse hsr.py file
+            effort_limit=None,  # use USD-authored effort (live: ~28 N.m wheels / 34.46 roll)
+            stiffness=None,     # use USD-authored stiffness (0 -> velocity drive); was 15000 (position drive, the freeze bug)
+            damping=None,       # use USD-authored damping (~57 -> velocity tracking); was 0
         ),
         "arm": ImplicitActuatorCfg(
             joint_names_expr=["arm_lift_joint", "arm_flex_joint", "arm_roll_joint", "wrist_flex_joint", "wrist_roll_joint"],
@@ -213,18 +219,19 @@ HSRB_CFG_DELAYED = ArticulationCfg(
     ),
     actuators={
         "base": DelayedPDActuatorCfg(
+            # Same velocity-drive fix as HSRB_CFG (None -> USD-authored velocity drive; was the
+            # 15000/0 position-drive freeze bug). NOTE: this delayed variant is NOT the active nav
+            # teacher (that uses HSRB_CFG / ImplicitActuator, GPU-validated); the explicit DelayedPD
+            # velocity-control path here is unvalidated -- verify before relying on it.
             joint_names_expr=["base_l_drive_wheel_joint", "base_r_drive_wheel_joint", "base_roll_joint"],
             velocity_limit={
                 "base_l_drive_wheel_joint": 8.0, # these values are from hsr-omniverse velocity limits
-                "base_r_drive_wheel_joint": 8.0, 
-                "base_roll_joint": 8.0, 
+                "base_r_drive_wheel_joint": 8.0,
+                "base_roll_joint": 8.0,
             },
-            effort_limit={
-                "base_l_drive_wheel_joint": 664.020019, # default values from offical hsr USD file - this is different than the URDF file
-                "base_r_drive_wheel_joint": 664.020019,
-                "base_roll_joint": 100000,},
-            stiffness=15000.0, # default values from offical hsr-omniverse hsr.py file
-            damping=0.0, # default values from offical hsr-omniverse hsr.py file
+            effort_limit=None,  # use USD-authored effort
+            stiffness=None,     # use USD-authored stiffness (0 -> velocity drive); was 15000 (position drive)
+            damping=None,       # use USD-authored damping (~57 -> velocity tracking); was 0
             min_delay=0,  # physics time steps (min: 2.0*0=0.0ms)
             max_delay=2,  # physics time steps (max: 2.0*4=8.0ms)
         ),
