@@ -153,17 +153,38 @@ HSRB_CFG = ArticulationCfg(
         #         "head_tilt_joint": 10.0, 
         #     },
         # ),
+        # Gripper: direct-drive proximal+distal to URDF-coupled binary endpoints, with the passive
+        # spring DOF LOCKED. See docs/HSR_GRIPPER_FINDINGS.md s4/s4b. Two validated changes vs the old
+        # config (k=2, proximal/distal only):
+        #   (1) k=2 was far too weak to close (sweep: proximal stayed near the 0.75 default); k=100 closes.
+        #   (2) the hand_*_spring_proximal joints were in NO actuator -> Isaac Lab gave them implicit k=0
+        #       -> the free spring flopped (+-2.4 rad) and destabilised the distal (its child chain),
+        #       making grasps non-deterministic (open sd~0.6). Covering them at k=500 LOCKS the spring:
+        #       open becomes deterministic (sd=0) and CLOSE pinches the fingertips in correctly.
+        # (Native URDF mimic coupling was explored thoroughly and does NOT work robustly for this 4-joint
+        #  chain with a free spring + massive endpoint -- see s4b. Direct-drive is the production path.)
         "gripper": ImplicitActuatorCfg(
-            joint_names_expr=["hand_l_proximal_joint", "hand_r_proximal_joint", "hand_l_distal_joint", "hand_r_distal_joint"],
-            effort_limit=200.0,# 1.0
-            # stiffness=1e5, below values are from moveit config, should they be higher?
-            stiffness={
-                "hand_l_proximal_joint": 2.0,
-                "hand_r_proximal_joint": 2.0,
-                "hand_l_distal_joint": 2.0,
-                "hand_r_distal_joint": 2.0,
+            joint_names_expr=["hand_l_proximal_joint", "hand_r_proximal_joint",
+                              "hand_l_distal_joint", "hand_r_distal_joint",
+                              "hand_l_spring_proximal_joint", "hand_r_spring_proximal_joint"],
+            # Per-joint effort: cap the finger SQUEEZE at 80 N·m (real plugin max_torque=8; 80 keeps
+            # closing reliable in sim without crushing/ejecting objects or slamming the distal far past
+            # its limit) while giving the spring lock the headroom (500) it needs to stay rigid.
+            effort_limit={
+                "hand_l_proximal_joint": 80.0, "hand_r_proximal_joint": 80.0,
+                "hand_l_distal_joint": 80.0,   "hand_r_distal_joint": 80.0,
+                "hand_l_spring_proximal_joint": 500.0, "hand_r_spring_proximal_joint": 500.0,
             },
-            damping=0.5, # 0.1
+            stiffness={
+                "hand_l_proximal_joint": 100.0, "hand_r_proximal_joint": 100.0,
+                "hand_l_distal_joint": 100.0,    "hand_r_distal_joint": 100.0,
+                "hand_l_spring_proximal_joint": 500.0, "hand_r_spring_proximal_joint": 500.0,  # LOCK
+            },
+            damping={
+                "hand_l_proximal_joint": 2.0, "hand_r_proximal_joint": 2.0,
+                "hand_l_distal_joint": 2.0,   "hand_r_distal_joint": 2.0,
+                "hand_l_spring_proximal_joint": 20.0, "hand_r_spring_proximal_joint": 20.0,
+            },
         ),
     },
 )
@@ -285,17 +306,28 @@ HSRB_CFG_DELAYED = ArticulationCfg(
         #         "head_tilt_joint": 10.0, 
         #     },
         # ),
+        # Gripper: see HSRB_CFG above + docs/HSR_GRIPPER_FINDINGS.md. Direct-drive proximal+distal to
+        # URDF-coupled binary endpoints with the passive spring DOF LOCKED (k=500); proximal/distal k=100
+        # (k=2 was too weak to close). Same gains as the teacher gripper; keeps the DelayedPD wrapper.
         "gripper": DelayedPDActuatorCfg(
-            joint_names_expr=["hand_l_proximal_joint", "hand_r_proximal_joint", "hand_l_distal_joint", "hand_r_distal_joint"],
-            effort_limit=200.0,# 1.0
-            # stiffness=1e5, below values are from moveit config, should they be higher?
-            stiffness={
-                "hand_l_proximal_joint": 2.0,
-                "hand_r_proximal_joint": 2.0,
-                "hand_l_distal_joint": 2.0,
-                "hand_r_distal_joint": 2.0,
+            joint_names_expr=["hand_l_proximal_joint", "hand_r_proximal_joint",
+                              "hand_l_distal_joint", "hand_r_distal_joint",
+                              "hand_l_spring_proximal_joint", "hand_r_spring_proximal_joint"],
+            effort_limit={
+                "hand_l_proximal_joint": 80.0, "hand_r_proximal_joint": 80.0,
+                "hand_l_distal_joint": 80.0,   "hand_r_distal_joint": 80.0,
+                "hand_l_spring_proximal_joint": 500.0, "hand_r_spring_proximal_joint": 500.0,
             },
-            damping=0.5, # 0.1
+            stiffness={
+                "hand_l_proximal_joint": 100.0, "hand_r_proximal_joint": 100.0,
+                "hand_l_distal_joint": 100.0,    "hand_r_distal_joint": 100.0,
+                "hand_l_spring_proximal_joint": 500.0, "hand_r_spring_proximal_joint": 500.0,  # LOCK
+            },
+            damping={
+                "hand_l_proximal_joint": 2.0, "hand_r_proximal_joint": 2.0,
+                "hand_l_distal_joint": 2.0,   "hand_r_distal_joint": 2.0,
+                "hand_l_spring_proximal_joint": 20.0, "hand_r_spring_proximal_joint": 20.0,
+            },
             min_delay=0,  # physics time steps (min: 2.0*0=0.0ms)
             max_delay=2,  # physics time steps (max: 2.0*4=8.0ms)
         ),
