@@ -312,7 +312,15 @@ class HSRBaseVelocityControl(ActionTerm):
         self.odometry_.x += abs_dot_x[:] * self.dt
         self.odometry_.y += abs_dot_y[:] * self.dt
         self.odometry_.ang += diff_r
-    
+
+        # Base velocity in the WORLD frame (linear x/y from wheel forward-dynamics, angular z = dot_r),
+        # consumed by the hsr_base_vel observation. state_vel_ was previously only zeroed on reset and
+        # never written here, so base_velocity (and thus the base_vel obs fed to the actor AND critic)
+        # was identically zero. Frame matches the hsr_base_vel docstring + the real robot's wheel odom.
+        self.state_vel_.x_vel[:] = abs_dot_x
+        self.state_vel_.y_vel[:] = abs_dot_y
+        self.state_vel_.ang_vel[:] = cartesian_param_[:, 2]
+
         self.relcmd.values = self._raw_actions
 
         # Calculate updated joint velocities given the current steering angle
