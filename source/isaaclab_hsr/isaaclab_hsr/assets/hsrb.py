@@ -41,7 +41,7 @@ HSRB_CFG = ArticulationCfg(
         articulation_props=sim_utils.ArticulationRootPropertiesCfg(
             # enabled_self_collisions=False,
             solver_position_iteration_count=8,
-            solver_velocity_iteration_count=4,
+            solver_velocity_iteration_count=2,  # WS-C1: 4->2, validated ~5% throughput win (SPEED_NOTES 2026-06-21); 2 >= stock norm (1); CVaR-confirmed in the teacher retrain
             sleep_threshold=0.005,
             stabilization_threshold=0.001,
             # fix_root_link=False,
@@ -195,7 +195,7 @@ HSRB_CFG_DELAYED = ArticulationCfg(
         articulation_props=sim_utils.ArticulationRootPropertiesCfg(
             # enabled_self_collisions=False,
             solver_position_iteration_count=8,
-            solver_velocity_iteration_count=4,
+            solver_velocity_iteration_count=2,  # WS-C1: 4->2, validated ~5% throughput win (SPEED_NOTES 2026-06-21); 2 >= stock norm (1); CVaR-confirmed in the teacher retrain
             sleep_threshold=0.005,
             stabilization_threshold=0.001,
             # fix_root_link=False,
@@ -480,9 +480,9 @@ CYLINDER_CFG = ArticulationCfg(
         "base": ImplicitActuatorCfg(
             joint_names_expr=["joint_x", "joint_y", "joint_z"],
             velocity_limit={
-                "joint_x": 0.5,
-                "joint_y": 0.5,
-                "joint_z": 0.5,
+                "joint_x": 3.0,   # RUDT de-confound E2: was 0.5 -> throttled the intended 2.5 m/s lunge
+                "joint_y": 3.0,   # (lunge_velocity_range) to 0.5, defeating the heavy tail. 3.0 = headroom.
+                "joint_z": 0.5,   # keep vertical throttled: horizontal (in-plane) lunge only.
             },
             effort_limit=100000.0,
             stiffness=1000.0,
